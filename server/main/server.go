@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"github.com/Rmarken5/file-broadcaster/observer"
 	"github.com/fsnotify/fsnotify"
 	file_listener "github.com/rmarken5/cfcs/server/file-listener"
+	"github.com/rmarken5/cfcs/server/observer"
+	"io"
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -49,8 +52,14 @@ func main() {
 		},
 	}
 	done := make(chan bool)
+	SERVER := "localhost" + ":" + "8000"
+	a, err := net.ResolveTCPAddr("tcp", SERVER)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	l, err := net.Listen("tcp4", ":8000")
+	l, err := net.ListenTCP("tcp4", a)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -78,18 +87,83 @@ func (s *server) acceptClients(listener net.Listener) {
 			fmt.Println(err)
 			return
 		}
-		go s.handleConnection(c)
+		if c != nil {
+			go s.handleConnection(c)
+		}
 	}
 }
 
 func (s *server) handleConnection(c net.Conn) {
+	buffer := make([]byte, 1024)
+	var clientConnType observer.ConnHandlerMessages
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+	var str string
+	for {
+		r, err := c.Read(buffer)
+		fmt.Println(r)
+		time.Sleep(time.Second)
+		if err != nil {
+			fmt.Printf("error reading incoming connection for type: %v\n", err)
+			return
+		}
+
+		if r > 0 {
+			str = strings.TrimSpace(string(buffer[0:r]))
+			break
+		}
+	}
+
+	connType, err := strconv.Atoi(str)
+	if err != nil {
+		fmt.Printf("error converting bytes to string to int: %v\n", "err")
+		return
+	}
+
+	if !observer.IsCCT(connType) {
+		fmt.Printf("Not a request that can be fulfilled: %d\n", connType)
+		return
+	}
+	clientConnType = observer.ConnHandlerMessages(connType)
+	fmt.Println(clientConnType.String())
+
 	obs := &observer.ConnectionData{
-		Address: c.RemoteAddr().String(),
-		Conn:    c,
+		Address:           c.RemoteAddr().String(),
+		Conn:              c,
+		ClientRequestType: clientConnType,
 	}
 	fmt.Println("Addr: ", obs.GetIdentifier())
-	s.FileSubject.Subscribe(obs)
+	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
+		s.FileSubject.Subscribe(obs)
+	}
+
+	if clientConnType == observer.FILE_REQUEST_CONN_TYPE {
+		_, err := c.Write([]byte(fmt.Sprint(observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)))
+		if err != nil {
+			fmt.Printf("not able to communicate with client: %v\n", err)
+			return
+		}
+		var fileNameBytes []byte
+		_, err = c.Read(fileNameBytes)
+		if err != nil {
+			fmt.Printf("not able to read filename from client: %v\n", err)
+			return
+		}
+		f, err := os.Open(string(fileNameBytes))
+		defer f.Close()
+		if err != nil {
+			fmt.Printf("not able to open file: %v\n", err)
+			return
+		}
+		reader := bufio.NewReader(f)
+		writer := bufio.NewWriter(c)
+		defer writer.Flush()
+
+		_, err = io.Copy(writer, reader)
+		if err != nil {
+			fmt.Printf("Unable to copy file to connection: %v\n", err)
+			return
+		}
+	}
 }
 
 func (s *server) listenForFiles(directory string) error {

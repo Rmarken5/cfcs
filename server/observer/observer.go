@@ -8,9 +8,18 @@ import (
 
 //go:generate mockgen -destination=./mock_conn_test.go --package=observer net Conn
 
+type ConnHandlerMessages int
+
+const (
+	FILE_LISTENER_CONN_TYPE ConnHandlerMessages = iota
+	FILE_REQUEST_CONN_TYPE
+	SERVER_READY_TO_RECIEVE_FILE_REQUEST
+)
+
 type ConnectionData struct {
-	Address string
-	Conn    net.Conn
+	Address           string
+	Conn              net.Conn
+	ClientRequestType ConnHandlerMessages
 }
 
 func (c *ConnectionData) LoadAllFiles(files []string) error {
@@ -40,4 +49,21 @@ func (c *ConnectionData) AddFile(file string) error {
 
 func (c *ConnectionData) GetIdentifier() string {
 	return c.Address
+}
+
+func IsCCT(n int) bool {
+	conv := ConnHandlerMessages(n)
+	return conv == FILE_LISTENER_CONN_TYPE || conv == FILE_REQUEST_CONN_TYPE
+}
+
+func (chm ConnHandlerMessages) String() string {
+	switch chm {
+	case FILE_LISTENER_CONN_TYPE:
+		return "FILE_LISTENER_CONNECTION"
+	case FILE_REQUEST_CONN_TYPE:
+		return "FILE_REQUEST_CONNECTION"
+	case SERVER_READY_TO_RECIEVE_FILE_REQUEST:
+		return "SERVER_READY_TO_RECEIVE_FILE_REQUEST"
+	}
+	return ""
 }
