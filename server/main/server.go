@@ -101,7 +101,6 @@ func (s *server) handleConnection(c net.Conn) {
 	for {
 		r, err := c.Read(buffer)
 		fmt.Println(r)
-		time.Sleep(time.Second)
 		if err != nil {
 			fmt.Printf("error reading incoming connection for type: %v\n", err)
 			return
@@ -109,6 +108,7 @@ func (s *server) handleConnection(c net.Conn) {
 
 		if r > 0 {
 			str = strings.TrimSpace(string(buffer[0:r]))
+			fmt.Println(str)
 			break
 		}
 	}
@@ -137,18 +137,26 @@ func (s *server) handleConnection(c net.Conn) {
 	}
 
 	if clientConnType == observer.FILE_REQUEST_CONN_TYPE {
-		_, err := c.Write([]byte(fmt.Sprint(observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)))
+		_, err = fmt.Fprintln(c, observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)
 		if err != nil {
 			fmt.Printf("not able to communicate with client: %v\n", err)
 			return
 		}
-		var fileNameBytes []byte
-		_, err = c.Read(fileNameBytes)
-		if err != nil {
-			fmt.Printf("not able to read filename from client: %v\n", err)
-			return
+		for {
+			r, err := c.Read(buffer)
+			fmt.Printf("Read length: %d/n", r)
+			if err != nil {
+				fmt.Printf("error reading incoming connection for type: %v\n", err)
+				return
+			}
+
+			if r > 0 {
+				str = strings.TrimSpace(string(buffer[0:r]))
+				break
+			}
 		}
-		f, err := os.Open(string(fileNameBytes))
+
+		f, err := os.Open(*directory + "/" + str)
 		defer f.Close()
 		if err != nil {
 			fmt.Printf("not able to open file: %v\n", err)
