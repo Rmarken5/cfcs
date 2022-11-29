@@ -97,22 +97,18 @@ func (s *server) handleConnection(c net.Conn) {
 	buffer := make([]byte, 1024)
 	var clientConnType observer.ConnHandlerMessages
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
-	var str string
-	for {
-		r, err := c.Read(buffer)
-		fmt.Println(r)
-		if err != nil {
-			fmt.Printf("error reading incoming connection for type: %v\n", err)
-			return
-		}
 
-		if r > 0 {
-			str = strings.TrimSpace(string(buffer[0:r]))
-			fmt.Println(str)
-			break
-		}
+	r, err := c.Read(buffer)
+	fmt.Printf("Read length: %d\n", r)
+	if err != nil {
+		fmt.Printf("error reading incoming connection for type: %v\n", err)
+		return
 	}
 
+	if r <= 0 {
+		fmt.Println("No bytes read from client on handshake")
+	}
+	str := strings.TrimSpace(string(buffer[0:r]))
 	connType, err := strconv.Atoi(str)
 	if err != nil {
 		fmt.Printf("error converting bytes to string to int: %v\n", "err")
@@ -124,7 +120,7 @@ func (s *server) handleConnection(c net.Conn) {
 		return
 	}
 	clientConnType = observer.ConnHandlerMessages(connType)
-	fmt.Println(clientConnType.String())
+	fmt.Println("Conn handler message: " + clientConnType.String())
 
 	obs := &observer.ConnectionData{
 		Address:           c.RemoteAddr().String(),
@@ -137,41 +133,45 @@ func (s *server) handleConnection(c net.Conn) {
 	}
 
 	if clientConnType == observer.FILE_REQUEST_CONN_TYPE {
-		_, err = fmt.Fprintln(c, observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)
-		if err != nil {
-			fmt.Printf("not able to communicate with client: %v\n", err)
-			return
-		}
-		for {
-			r, err := c.Read(buffer)
-			fmt.Printf("Read length: %d/n", r)
-			if err != nil {
-				fmt.Printf("error reading incoming connection for type: %v\n", err)
-				return
-			}
-
-			if r > 0 {
-				str = strings.TrimSpace(string(buffer[0:r]))
-				break
-			}
-		}
-
-		f, err := os.Open(*directory + "/" + str)
-		defer f.Close()
-		if err != nil {
-			fmt.Printf("not able to open file: %v\n", err)
-			return
-		}
-		reader := bufio.NewReader(f)
-		writer := bufio.NewWriter(c)
-		defer writer.Flush()
-
-		_, err = io.Copy(writer, reader)
-		if err != nil {
-			fmt.Printf("Unable to copy file to connection: %v\n", err)
-			return
+		if err := serveFile(c); err != nil {
+			fmt.Printf("error serving file: %v", err)
 		}
 	}
+}
+
+func serveFile(c net.Conn) error {
+	buffer := make([]byte, 1024)
+	_, err := fmt.Fprintln(c, observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)
+	if err != nil {
+		return fmt.Errorf("not able to communicate with client: %v\n", err)
+	}
+
+	r, err := c.Read(buffer)
+	if err != nil {
+		return fmt.Errorf("error reading incoming connection for type: %v\n", err)
+	}
+
+	if r <= 0 {
+		return fmt.Errorf("no bytes read from client")
+	}
+	str := strings.TrimSpace(string(buffer[0:r]))
+
+	f, err := os.Open(*directory + "/" + str)
+	defer f.Close()
+
+	if err != nil {
+		return fmt.Errorf("not able to open file: %v\n", err)
+	}
+
+	reader := bufio.NewReader(f)
+	writer := bufio.NewWriter(c)
+	defer writer.Flush()
+	_, err = io.Copy(writer, reader)
+
+	if err != nil {
+		return fmt.Errorf("Unable to copy file to connection: %v\n", err)
+	}
+	return nil
 }
 
 func (s *server) listenForFiles(directory string) error {
