@@ -15,7 +15,7 @@ type ConnectionManagerImpl struct {
 	db        *bitcask.Bitcask
 }
 
-func NewFileManagerImpl(dbLocation string) *ConnectionManagerImpl {
+func NewConnectionManagerImpl(dbLocation string) *ConnectionManagerImpl {
 	open, err := bitcask.Open(dbLocation, bitcask.WithSync(true), bitcask.WithAutoRecovery(true))
 	if err != nil {
 		log.Fatalf("Error opening db: %v\n", err)

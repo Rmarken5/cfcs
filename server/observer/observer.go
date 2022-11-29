@@ -14,6 +14,7 @@ const (
 	FILE_LISTENER_CONN_TYPE ConnHandlerMessages = iota
 	FILE_REQUEST_CONN_TYPE
 	SERVER_READY_TO_RECIEVE_FILE_REQUEST
+	SERVER_SENDING_FILE_LIST
 )
 
 type ConnectionData struct {
@@ -24,6 +25,11 @@ type ConnectionData struct {
 
 func (c *ConnectionData) LoadAllFiles(files []string) error {
 	fileString := strings.Join(files, ",") + "\n"
+
+	if _, err := c.Conn.Write([]byte(fmt.Sprintf("%d\n", SERVER_SENDING_FILE_LIST))); err != nil {
+		fmt.Printf("Unable to write %s to %s", fileString, c.Address)
+		return fmt.Errorf("error %v: ", err)
+	}
 
 	fmt.Println("writing files: ", fileString)
 

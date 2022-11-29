@@ -1,15 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
+	"github.com/rmarken5/cfcs/client/client"
 	file_manager "github.com/rmarken5/cfcs/client/file-manager"
-	"github.com/rmarken5/cfcs/server/observer"
-	"io"
-	"net"
-	"strings"
-
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,20 +13,26 @@ import (
 var serverAddress = flag.String("directory", "localhost:8000", "Directory to listen to files on.")
 
 func main() {
-	buffer := make([]byte, 1024)
+	//buffer := make([]byte, 1024)
 	// TODO: Create tcp connection from Config file or cl options
 	flag.Parse()
 
-	rAddr, err := net.ResolveTCPAddr("tcp", *serverAddress)
+	fileManagerImpl := file_manager.NewConnectionManagerImpl("/home/ryan/file-client/")
+	clientImpl := client.NewClientImpl(fileManagerImpl)
+
+	conn, err := clientImpl.ConnectToServer(*serverAddress)
 	if err != nil {
-		fmt.Printf("error connecting to tcp: %v\n", err)
+		panic(err)
 	}
-	tcp, err := net.DialTCP("tcp", nil, rAddr)
+	go clientImpl.ManageServerResponses(conn)
+	go clientImpl.RequestFiles(*serverAddress)
+
+	err = clientImpl.RequestAllFileNames(conn)
 	if err != nil {
-		fmt.Printf("error connecting to tcp: %v\n", err)
+		panic(err)
 	}
-	fmt.Println(tcp.LocalAddr().String())
-	write, err := fmt.Fprintf(tcp, "%d\n", observer.FILE_REQUEST_CONN_TYPE)
+
+	/*write, err := fmt.Fprintf(tcp, "%d\n", observer.FILE_REQUEST_CONN_TYPE)
 
 	if err != nil {
 		fmt.Printf("error writing to tcp: %v\n", err)
@@ -62,7 +63,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("Unable to copy file to connection: %v\n", err)
 		return
-	}
+	}*/
 
 	/*
 		sshClient, err := ssh.Dial("tcp", ":22", &clientConfig)
@@ -77,7 +78,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fileManagerImpl := file_manager.NewFileManagerImpl("/home/ryan/file-client/", sftp)
+		fileManagerImpl := file_manager.NewConnectionManagerImpl("/home/ryan/file-client/", sftp)
 		clientImpl := client.NewClientImpl(fileManagerImpl)
 
 		conn, err := clientImpl.ConnectToServer(*serverAddress)
