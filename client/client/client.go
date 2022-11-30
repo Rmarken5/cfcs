@@ -15,11 +15,11 @@ import (
 )
 
 type ClientImpl struct {
-	fileManager *file_manager.ConnectionManagerImpl
+	fileManager *file_manager.FileManagerImpl
 	fileChannel chan string
 }
 
-func NewClientImpl(fileManager *file_manager.ConnectionManagerImpl) *ClientImpl {
+func NewClientImpl(fileManager *file_manager.FileManagerImpl) *ClientImpl {
 	fileChannel := make(chan string)
 	return &ClientImpl{
 		fileManager: fileManager,

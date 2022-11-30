@@ -18,9 +18,8 @@ const (
 )
 
 type ConnectionData struct {
-	Address           string
-	Conn              net.Conn
-	ClientRequestType ConnHandlerMessages
+	Address string
+	Conn    net.Conn
 }
 
 func (c *ConnectionData) LoadAllFiles(files []string) error {

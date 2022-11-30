@@ -10,24 +10,24 @@ import (
 	"os"
 )
 
-type ConnectionManagerImpl struct {
+type FileManagerImpl struct {
 	fileQueue map[string]bool
 	db        *bitcask.Bitcask
 }
 
-func NewConnectionManagerImpl(dbLocation string) *ConnectionManagerImpl {
+func NewConnectionManagerImpl(dbLocation string) *FileManagerImpl {
 	open, err := bitcask.Open(dbLocation, bitcask.WithSync(true), bitcask.WithAutoRecovery(true))
 	if err != nil {
 		log.Fatalf("Error opening db: %v\n", err)
 	}
 
-	return &ConnectionManagerImpl{
+	return &FileManagerImpl{
 		fileQueue: make(map[string]bool),
 		db:        open,
 	}
 }
 
-func (f *ConnectionManagerImpl) WriteFileHashToDB(fileName string, srcFile *os.File) error {
+func (f *FileManagerImpl) WriteFileHashToDB(fileName string, srcFile *os.File) error {
 	hash, err := generateHash(srcFile)
 	if err != nil {
 		return err
@@ -37,21 +37,21 @@ func (f *ConnectionManagerImpl) WriteFileHashToDB(fileName string, srcFile *os.F
 	return err
 }
 
-func (f *ConnectionManagerImpl) PrintKeysInDatabase() {
+func (f *FileManagerImpl) PrintKeysInDatabase() {
 	k := <-f.db.Keys()
 	fmt.Println(string(k))
 }
 
-func (f *ConnectionManagerImpl) RemoveFileFromQueue(fileName string) {
+func (f *FileManagerImpl) RemoveFileFromQueue(fileName string) {
 	delete(f.fileQueue, fileName)
 }
 
-func (f *ConnectionManagerImpl) CloseConns() {
+func (f *FileManagerImpl) CloseConns() {
 	fmt.Println("Database close called.")
 	f.db.Close()
 }
 
-func (f *ConnectionManagerImpl) ShouldWriteToDB(fileName string, srcFile *os.File) bool {
+func (f *FileManagerImpl) ShouldWriteToDB(fileName string, srcFile *os.File) bool {
 
 	fmt.Println("filename lookup: " + fileName)
 	if !f.db.Has([]byte(fileName)) {
@@ -68,21 +68,6 @@ func (f *ConnectionManagerImpl) ShouldWriteToDB(fileName string, srcFile *os.Fil
 	hashToCompare, err := f.db.Get([]byte(fileName))
 	fmt.Println("File hash: " + string(hashToCompare))
 	return hash != string(hashToCompare)
-}
-
-func (f *ConnectionManagerImpl) HandleServerResponse(response string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (f *ConnectionManagerImpl) GetAllFileNamesFromServer() ([]string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (f *ConnectionManagerImpl) RequestFileFromServer(fileName string) (*os.File, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func generateHash(srcFile *os.File) (string, error) {

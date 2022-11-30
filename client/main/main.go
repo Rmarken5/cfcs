@@ -109,7 +109,7 @@ func main() {
 	<-forever
 }
 
-func gracefulShutdown(fileManager file_manager.ConnectionManager) {
+func gracefulShutdown(fileManager file_manager.FileManager) {
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt)
 	signal.Notify(s, syscall.SIGTERM)
