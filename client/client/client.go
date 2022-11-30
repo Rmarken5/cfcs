@@ -2,9 +2,10 @@ package client
 
 import (
 	"bufio"
-	"bytes"
+	"encoding/json"
 	"fmt"
 	file_manager "github.com/rmarken5/cfcs/client/file-manager"
+	"github.com/rmarken5/cfcs/common"
 	"github.com/rmarken5/cfcs/server/observer"
 	"io"
 	"log"
@@ -16,11 +17,11 @@ import (
 
 type ClientImpl struct {
 	fileManager *file_manager.FileManagerImpl
-	fileChannel chan string
+	fileChannel chan common.FileInfo
 }
 
 func NewClientImpl(fileManager *file_manager.FileManagerImpl) *ClientImpl {
-	fileChannel := make(chan string)
+	fileChannel := make(chan common.FileInfo)
 	return &ClientImpl{
 		fileManager: fileManager,
 		fileChannel: fileChannel,
@@ -79,116 +80,85 @@ func (c *ClientImpl) ManageServerResponses(conn *net.TCPConn) {
 
 func (c *ClientImpl) ListenForFiles(conn *net.TCPConn) {
 	fmt.Println("Starting to listen to files.")
-	reader := bufio.NewReader(conn)
-	for {
 
-		readString, err := reader.ReadString('\n')
+	for {
+		reader := bufio.NewReader(conn)
+		readBytes, err := reader.ReadBytes('\n')
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(readString)
-		files := strings.Split(readString, ",")
-		fmt.Printf("Files: %+v\n", files)
-		fmt.Println(len(files))
-
-		for _, file := range files {
-			file = strings.TrimSpace(file)
-			file = string(bytes.Trim([]byte(file), "\x00"))
-			c.fileChannel <- file
-			fmt.Printf("received %s\n", file)
+		fmt.Println(string(readBytes))
+		if len(readBytes) > 0 {
+			var info common.FileInfo
+			err = json.Unmarshal(readBytes, &info)
+			if err != nil {
+				fmt.Printf("cannot unmarshal bytes: %v\n", err)
+				continue
+			}
+			fmt.Printf("File: %+v\n", info)
+			c.fileChannel <- info
+			fmt.Printf("received %s\n", info)
 		}
 	}
 }
 
 func (c *ClientImpl) RequestFiles(serverAddress string) {
 	for file := range c.fileChannel {
-		go func(fileName string) {
-			fmt.Printf("got %s\n", fileName)
-			buffer := make([]byte, 1024)
-			tcp, err := c.ConnectToServer(serverAddress)
-			defer func(tcp *net.TCPConn) {
-				err := tcp.Close()
+		if c.fileManager.ShouldWriteToDB(file) {
+			go func(info common.FileInfo) {
+				fmt.Printf("got %v\n", info)
+				buffer := make([]byte, 1024)
+				tcp, err := c.ConnectToServer(serverAddress)
+				defer func(tcp *net.TCPConn) {
+					err := tcp.Close()
+					if err != nil {
+						fmt.Printf("error closing conn: %v\n", err)
+					}
+				}(tcp)
 				if err != nil {
-					fmt.Printf("error closing conn: %v\n", err)
+					fmt.Printf("Cannot conenct to server: %v\n", err)
+					return
 				}
-			}(tcp)
-			if err != nil {
-				fmt.Printf("Cannot conenct to server: %v\n", err)
-				return
-			}
-			write, err := fmt.Fprintf(tcp, "%d\n", observer.FILE_REQUEST_CONN_TYPE)
+				write, err := fmt.Fprintf(tcp, "%d\n", observer.FILE_REQUEST_CONN_TYPE)
 
-			if err != nil {
-				fmt.Printf("error writing to tcp: %v\n", err)
-			}
-			fmt.Printf("written: %d\n", write)
-
-			n, err := tcp.Read(buffer)
-			if err != nil {
-				fmt.Printf("error reading from connection: %v\n", err)
-			}
-
-			str := strings.TrimSpace(string(buffer[0:n]))
-			fmt.Println(str)
-
-			write, err = fmt.Fprintf(tcp, "%s\n", fileName)
-
-			f, err := os.Create("/home/ryan/programming/go-programs/cfcs/client/tmp/" + fileName)
-			defer f.Close()
-			if err != nil {
-				fmt.Printf("not able to open file: %v\n", err)
-				return
-			}
-			reader := bufio.NewReader(tcp)
-			writer := bufio.NewWriter(f)
-			defer writer.Flush()
-
-			_, err = io.Copy(writer, reader)
-			if err != nil {
-				fmt.Printf("Unable to copy file to connection: %v\n", err)
-				return
-			}
-			err = c.fileManager.WriteFileHashToDB(fileName, f)
-			if err != nil {
-				fmt.Printf("Error Downloading file: %s. Error: %v", file, err)
-			}
-		}(file)
-	}
-}
-func (c *ClientImpl) WriteComplete(conn *net.Conn) {
-	panic("implement me")
-}
-
-func (c *ClientImpl) FileChannel() *chan string {
-	return &c.fileChannel
-}
-
-// DownloadFiles listens to the file channel for incoming files and writes them if they don't exist in DB.
-/*func (c *ClientImpl) DownloadFiles(config ssh.ClientConfig) {
-	go func() {
-		for file := range *c.fileChannel {
-			// DownloadFiles TODO: Refactor server to not need fully qualified path from client
-			sourceFile, err := c.fileManager.GetSourceFile(&config, "/home/ryan/programming/go-programs/file-broadcaster/dummy/"+file)
-			if err != nil {
-				if sourceFile != nil {
-					sourceFile.Close()
-				}
-				fmt.Printf("Error getting src file: %s. Error: %v", file, err)
-			}
-			if c.fileManager.ShouldWriteToDB(file, sourceFile) {
-				fmt.Printf("Processing " + file)
-				_, err := c.fileManager.WriteSrcToDest(sourceFile, "/home/ryan/programming/go-programs/file-broadcaster/dummy/"+file)
 				if err != nil {
-					fmt.Printf("Error writing dest file: %s. Error: %v", file, err)
-					sourceFile.Close()
+					fmt.Printf("error writing to tcp: %v\n", err)
 				}
-				err = c.fileManager.WriteFileHashToDB(file, sourceFile)
+				fmt.Printf("written: %d\n", write)
+
+				n, err := tcp.Read(buffer)
+				if err != nil {
+					fmt.Printf("error reading from connection: %v\n", err)
+				}
+
+				str := strings.TrimSpace(string(buffer[0:n]))
+				fmt.Println(str)
+
+				write, err = fmt.Fprintf(tcp, "%s\n", info.FileName)
+
+				f, err := os.Create("/home/ryan/programming/go-programs/cfcs/client/tmp/" + file.FileName)
+				defer f.Close()
+				if err != nil {
+					fmt.Printf("not able to open file: %v\n", err)
+					return
+				}
+				reader := bufio.NewReader(tcp)
+				writer := bufio.NewWriter(f)
+				defer writer.Flush()
+
+				_, err = io.Copy(writer, reader)
+				if err != nil {
+					fmt.Printf("Unable to copy file to connection: %v\n", err)
+					return
+				}
+				err = c.fileManager.WriteFileHashToDB(file)
 				if err != nil {
 					fmt.Printf("Error Downloading file: %s. Error: %v", file, err)
-					sourceFile.Close()
 				}
-				sourceFile.Close()
-			}
+			}(file)
 		}
-	}()
-}*/
+	}
+}
+func (c *ClientImpl) FileChannel() *chan common.FileInfo {
+	return &c.fileChannel
+}

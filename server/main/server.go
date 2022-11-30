@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/rmarken5/cfcs/common"
 	file_listener "github.com/rmarken5/cfcs/server/file-listener"
 	"github.com/rmarken5/cfcs/server/observer"
 	"io"
@@ -49,7 +50,7 @@ func main() {
 			Watcher: watcher,
 		},
 		FileSubject: &observer.FileBroadcastSubject{
-			Files:     []string{},
+			Files:     []common.FileInfo{},
 			Observers: make(map[string]observer.Observer, 0),
 		},
 	}
@@ -67,7 +68,7 @@ func main() {
 		return
 	}
 	defer l.Close()
-	s.addFilesToSubject(dirEntries)
+	s.addFilesToSubject(*directory, dirEntries)
 	go s.acceptClients(l)
 	go s.listenForFiles(*directory)
 
@@ -117,7 +118,7 @@ func (s *server) handleConnection(c net.Conn) {
 		return
 	}
 
-	if !observer.IsCCT(connType) {
+	if !observer.IsCHM(connType) {
 		fmt.Printf("Not a request that can be fulfilled: %d\n", connType)
 		return
 	}
@@ -125,9 +126,8 @@ func (s *server) handleConnection(c net.Conn) {
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
 	obs := &observer.ConnectionData{
-		Address:           c.RemoteAddr().String(),
-		Conn:              c,
-		ClientRequestType: clientConnType,
+		Address: c.RemoteAddr().String(),
+		Conn:    c,
 	}
 	fmt.Println("Addr: ", obs.GetIdentifier())
 	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
@@ -143,7 +143,7 @@ func (s *server) handleConnection(c net.Conn) {
 
 func serveFile(c net.Conn) error {
 	buffer := make([]byte, 1024)
-	_, err := fmt.Fprintln(c, observer.SERVER_READY_TO_RECIEVE_FILE_REQUEST)
+	_, err := fmt.Fprintln(c, observer.SERVER_READY_TO_RECEIVE_FILE_REQUEST)
 	if err != nil {
 		return fmt.Errorf("not able to communicate with client: %v\n", err)
 	}
@@ -188,10 +188,14 @@ func (s *server) listenForFiles(directory string) error {
 	return nil
 }
 
-func (s *server) addFilesToSubject(dirEntries []os.DirEntry) {
+func (s *server) addFilesToSubject(dir string, dirEntries []os.DirEntry) {
+	fullPath := make([]string, 0)
 	files := s.FileListener.ReadDirectory(dirEntries)
-
-	s.FileSubject.SetFiles(append(s.FileSubject.GetFiles(), files...))
+	for _, file := range files {
+		fullPath = append(fullPath, dir + "/" + file)
+	}
+	fileInfos := file_listener.BuildFileInfosFromPaths(fullPath)
+	s.FileSubject.SetFiles(append(s.FileSubject.GetFiles(), fileInfos...))
 }
 
 func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
@@ -202,8 +206,7 @@ func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
 	// watch for events
 	for event := range listenerChannel {
 		fmt.Printf("EVENT! %+v\n", event)
-		fileParts := strings.Split(event.Name, "/")
-		fileName := fileParts[len(fileParts)-1]
+		fileName := file_listener.GetFileNameFromPath(event.Name)
 
 		if strings.HasSuffix(fileName, "~") ||
 			!(event.Has(fsnotify.Create) ||
@@ -211,18 +214,24 @@ func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
 				event.Has(fsnotify.Remove)) {
 			continue
 		}
+		fileInfo, err := file_listener.BuildFileInfoFromPath(event.Name)
+		if err != nil {
+			fmt.Printf("cannot get fileInfo for %s\n", event.Name)
+			continue
+		}
+
 
 		// Get timer.
 		mu.Lock()
-		t, ok := timers[event.Name]
+		t, ok := timers[fileInfo.FileName]
 		mu.Unlock()
 
 		// No timer yet, so create one.
 		if !ok {
 			if event.Has(fsnotify.Create) || event.Has(fsnotify.Write) {
-				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.AddFile(fileName) })
+				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.AddFile(fileInfo) })
 			} else if event.Has(fsnotify.Remove) {
-				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.RemoveFile(fileName) })
+				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.RemoveFile(fileInfo) })
 			}
 			t.Stop()
 

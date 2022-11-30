@@ -1,13 +1,10 @@
 package file_manager
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"git.mills.io/prologic/bitcask"
-	"io"
+	"github.com/rmarken5/cfcs/common"
 	"log"
-	"os"
 )
 
 type FileManagerImpl struct {
@@ -15,7 +12,7 @@ type FileManagerImpl struct {
 	db        *bitcask.Bitcask
 }
 
-func NewConnectionManagerImpl(dbLocation string) *FileManagerImpl {
+func NewFileManagerImpl(dbLocation string) *FileManagerImpl {
 	open, err := bitcask.Open(dbLocation, bitcask.WithSync(true), bitcask.WithAutoRecovery(true))
 	if err != nil {
 		log.Fatalf("Error opening db: %v\n", err)
@@ -27,13 +24,9 @@ func NewConnectionManagerImpl(dbLocation string) *FileManagerImpl {
 	}
 }
 
-func (f *FileManagerImpl) WriteFileHashToDB(fileName string, srcFile *os.File) error {
-	hash, err := generateHash(srcFile)
-	if err != nil {
-		return err
-	}
-	err = f.db.Put([]byte(fileName), []byte(hash))
-	fmt.Println(f.db.Get([]byte(fileName)))
+func (f *FileManagerImpl) WriteFileHashToDB(info common.FileInfo) error {
+	err := f.db.Put([]byte(info.FileName), []byte(info.Hash))
+	fmt.Println(f.db.Get([]byte(info.FileName)))
 	return err
 }
 
@@ -51,39 +44,20 @@ func (f *FileManagerImpl) CloseConns() {
 	f.db.Close()
 }
 
-func (f *FileManagerImpl) ShouldWriteToDB(fileName string, srcFile *os.File) bool {
+func (f *FileManagerImpl) ShouldWriteToDB(info common.FileInfo) bool {
 
-	fmt.Println("filename lookup: " + fileName)
-	if !f.db.Has([]byte(fileName)) {
+	fmt.Printf("filename lookup: %v\n", info)
+	if !f.db.Has([]byte(info.FileName)) {
 		return true
 	}
 	fmt.Println("db has file")
 
-	hash, err := generateHash(srcFile)
+	fmt.Println("Hash: " + info.Hash)
+	hashToCompare, err := f.db.Get([]byte(info.FileName))
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return false
+		fmt.Printf("error getting filename from db: %s\n %v\n", info.FileName, err)
 	}
-	fmt.Println("Hash: " + hash)
-	hashToCompare, err := f.db.Get([]byte(fileName))
 	fmt.Println("File hash: " + string(hashToCompare))
-	return hash != string(hashToCompare)
+	return info.Hash != string(hashToCompare)
 }
 
-func generateHash(srcFile *os.File) (string, error) {
-
-	//Initialize variable returnMD5String now in case an error has to be returned
-	var returnMD5String string
-	//Open a new hash interface to write to
-	hash := md5.New()
-	//Copy the file in the hash interface and check for any error
-	if _, err := io.Copy(hash, srcFile); err != nil {
-		fmt.Printf("errpr in copy: %v\n", err)
-		return returnMD5String, err
-	}
-	//Get the 16 bytes hash
-	hashInBytes := hash.Sum(nil)[:16]
-	//Convert the bytes to a string
-	returnMD5String = hex.EncodeToString(hashInBytes)
-	return returnMD5String, nil
-}
