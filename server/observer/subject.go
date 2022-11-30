@@ -16,8 +16,8 @@ func (f *FileBroadcastSubject) AddFile(fileName string) {
 	}
 	if !isExists {
 		f.Files = append(f.Files, fileName)
-		f.NotifyAllWithFile(fileName)
 	}
+	f.NotifyAllWithFile(fileName)
 }
 func (f *FileBroadcastSubject) RemoveFile(fileName string) {
 	newFileArr := f.Files

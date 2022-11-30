@@ -103,10 +103,15 @@ func (c *ClientImpl) ListenForFiles(conn *net.TCPConn) {
 func (c *ClientImpl) RequestFiles(serverAddress string) {
 	for file := range c.fileChannel {
 		go func(fileName string) {
-			fmt.Printf("got %s", fileName)
+			fmt.Printf("got %s\n", fileName)
 			buffer := make([]byte, 1024)
 			tcp, err := c.ConnectToServer(serverAddress)
-			defer tcp.Close()
+			defer func(tcp *net.TCPConn) {
+				err := tcp.Close()
+				if err != nil {
+					fmt.Printf("error closing conn: %v\n", err)
+				}
+			}(tcp)
 			if err != nil {
 				fmt.Printf("Cannot conenct to server: %v\n", err)
 				return

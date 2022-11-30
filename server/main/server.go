@@ -8,11 +8,13 @@ import (
 	file_listener "github.com/rmarken5/cfcs/server/file-listener"
 	"github.com/rmarken5/cfcs/server/observer"
 	"io"
+	"math"
 	"math/rand"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -180,12 +182,8 @@ func (s *server) listenForFiles(directory string) error {
 	fmt.Println("listening for files.")
 
 	done := make(chan bool)
+	go s.evaluateEvent(fileListener)
 
-	go func() {
-		for {
-			s.evaluateEvent(fileListener)
-		}
-	}()
 	<-done
 	return nil
 }
@@ -197,16 +195,41 @@ func (s *server) addFilesToSubject(dirEntries []os.DirEntry) {
 }
 
 func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
-	select {
+	waitFor := 100 * time.Millisecond
+	timers := make(map[string]*time.Timer)
+	var mu sync.Mutex
+
 	// watch for events
-	case event := <-listenerChannel:
+	for event := range listenerChannel {
 		fmt.Printf("EVENT! %+v\n", event)
 		fileParts := strings.Split(event.Name, "/")
 		fileName := fileParts[len(fileParts)-1]
-		if event.Op.String() == "CREATE" {
-			s.FileSubject.AddFile(fileName)
-		} else if event.Op.String() == "REMOVE" {
-			s.FileSubject.RemoveFile(fileName)
+
+		if strings.HasSuffix(fileName, "~") ||
+			!(event.Has(fsnotify.Create) ||
+				event.Has(fsnotify.Write) ||
+				event.Has(fsnotify.Remove)) {
+			continue
 		}
+
+		// Get timer.
+		mu.Lock()
+		t, ok := timers[event.Name]
+		mu.Unlock()
+
+		// No timer yet, so create one.
+		if !ok {
+			if event.Has(fsnotify.Create) || event.Has(fsnotify.Write) {
+				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.AddFile(fileName) })
+			} else if event.Has(fsnotify.Remove) {
+				t = time.AfterFunc(math.MaxInt64, func() { s.FileSubject.RemoveFile(fileName) })
+			}
+			t.Stop()
+
+			mu.Lock()
+			timers[event.Name] = t
+			mu.Unlock()
+		}
+		t.Reset(waitFor)
 	}
 }
