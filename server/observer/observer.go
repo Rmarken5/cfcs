@@ -30,8 +30,9 @@ func (c *ConnectionData) LoadAllFiles(files []common.FileInfo) error {
 		return fmt.Errorf("error %v: ", err)
 	}
 
-	fmt.Printf("writing files: %v+", files)
+	fmt.Printf("writing files: %+v\n", files)
 	for _, file := range files {
+		fmt.Printf("Writing File: %v\n", file)
 		if err := json.NewEncoder(c.Conn).Encode(file); err != nil {
 			return fmt.Errorf("Unable to write %v to %s: %v\n", files, c.Address, err)
 		}

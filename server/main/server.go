@@ -30,11 +30,33 @@ type server struct {
 	FileSubject  observer.Subject
 }
 
-var directory = flag.String("directory", "../dummy", "Directory to listen to files on.")
+var directory = flag.String("directory", "", "Used to set directory of file to listen to.")
+var serverPort = flag.String("port", "8000", "Used to set port of server to listen to incoming connections.")
+var help = flag.Bool("help", false, "Print this menu.")
+var serverAddress string
+func init()  {
+	flag.Parse()
+
+	if *help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	directory := strings.TrimSpace(*directory)
+	if directory == "" {
+		fmt.Fprint(os.Stderr, "directory flag is required\n")
+		os.Exit(99)
+	}
+
+	serverPort := strings.TrimSpace(*serverPort)
+	if serverPort == ""{
+		fmt.Fprint(os.Stderr, "port flag is required\n")
+		os.Exit(99)
+	}
+	serverAddress = fmt.Sprintf("%s:%s", "localhost", serverPort)
+}
 
 func main() {
-
-	flag.Parse()
 
 	watcher, err := fsnotify.NewWatcher()
 
@@ -55,8 +77,7 @@ func main() {
 		},
 	}
 	done := make(chan bool)
-	SERVER := "localhost" + ":" + "8000"
-	a, err := net.ResolveTCPAddr("tcp", SERVER)
+	a, err := net.ResolveTCPAddr("tcp", serverAddress)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -75,7 +96,7 @@ func main() {
 	for {
 		select {
 		case <-done:
-			os.Exit(1)
+			os.Exit(0)
 		}
 	}
 
@@ -125,12 +146,14 @@ func (s *server) handleConnection(c net.Conn) {
 	clientConnType = observer.ConnHandlerMessages(connType)
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
-	obs := &observer.ConnectionData{
-		Address: c.RemoteAddr().String(),
-		Conn:    c,
-	}
-	fmt.Println("Addr: ", obs.GetIdentifier())
+
 	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
+		obs := &observer.ConnectionData{
+			Address: c.RemoteAddr().String(),
+			Conn:    c,
+		}
+		fmt.Println("Addr: ", obs.GetIdentifier())
+
 		s.FileSubject.Subscribe(obs)
 	}
 
@@ -158,6 +181,8 @@ func serveFile(c net.Conn) error {
 	}
 	str := strings.TrimSpace(string(buffer[0:r]))
 
+	fmt.Println("Client wants: " + str)
+
 	f, err := os.Open(*directory + "/" + str)
 	defer f.Close()
 
@@ -169,6 +194,7 @@ func serveFile(c net.Conn) error {
 	writer := bufio.NewWriter(c)
 	defer writer.Flush()
 	_, err = io.Copy(writer, reader)
+
 
 	if err != nil {
 		return fmt.Errorf("Unable to copy file to connection: %v\n", err)

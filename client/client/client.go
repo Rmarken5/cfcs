@@ -18,13 +18,15 @@ import (
 type ClientImpl struct {
 	fileManager *file_manager.FileManagerImpl
 	fileChannel chan common.FileInfo
+	directory string
 }
 
-func NewClientImpl(fileManager *file_manager.FileManagerImpl) *ClientImpl {
+func NewClientImpl(fileManager *file_manager.FileManagerImpl, directory string) *ClientImpl {
 	fileChannel := make(chan common.FileInfo)
 	return &ClientImpl{
 		fileManager: fileManager,
 		fileChannel: fileChannel,
+		directory: directory,
 	}
 }
 
@@ -80,17 +82,17 @@ func (c *ClientImpl) ManageServerResponses(conn *net.TCPConn) {
 
 func (c *ClientImpl) ListenForFiles(conn *net.TCPConn) {
 	fmt.Println("Starting to listen to files.")
-
+	reader := bufio.NewReader(conn)
 	for {
-		reader := bufio.NewReader(conn)
-		readBytes, err := reader.ReadBytes('\n')
+		fmt.Println("Starting loop")
+		readString, err := reader.ReadString('\n')
 		if err != nil {
 			log.Println(err)
 		}
-		fmt.Println(string(readBytes))
-		if len(readBytes) > 0 {
+		fmt.Println(readString)
+		if len(readString) > 0 {
 			var info common.FileInfo
-			err = json.Unmarshal(readBytes, &info)
+			err = json.Unmarshal([]byte(readString), &info)
 			if err != nil {
 				fmt.Printf("cannot unmarshal bytes: %v\n", err)
 				continue
@@ -132,12 +134,13 @@ func (c *ClientImpl) RequestFiles(serverAddress string) {
 				}
 
 				str := strings.TrimSpace(string(buffer[0:n]))
-				fmt.Println(str)
+				fmt.Println("Should be \"SERVER_READY\": " + str)
+				f, err := os.Create(c.directory + "/" + info.FileName)
+				defer f.Close()
 
 				write, err = fmt.Fprintf(tcp, "%s\n", info.FileName)
 
-				f, err := os.Create("/home/ryan/programming/go-programs/cfcs/client/tmp/" + file.FileName)
-				defer f.Close()
+
 				if err != nil {
 					fmt.Printf("not able to open file: %v\n", err)
 					return
