@@ -34,7 +34,8 @@ var directory = flag.String("directory", "", "Used to set directory of file to l
 var serverPort = flag.String("port", "8000", "Used to set port of server to listen to incoming connections.")
 var help = flag.Bool("help", false, "Print this menu.")
 var serverAddress string
-func init()  {
+
+func init() {
 	flag.Parse()
 
 	if *help {
@@ -49,11 +50,11 @@ func init()  {
 	}
 
 	serverPort := strings.TrimSpace(*serverPort)
-	if serverPort == ""{
+	if serverPort == "" {
 		fmt.Fprint(os.Stderr, "port flag is required\n")
 		os.Exit(99)
 	}
-	serverAddress = fmt.Sprintf("%s:%s", "localhost", serverPort)
+	serverAddress = fmt.Sprintf("%s:%s", "0.0.0.0", serverPort)
 }
 
 func main() {
@@ -83,7 +84,7 @@ func main() {
 		return
 	}
 
-	l, err := net.ListenTCP("tcp4", a)
+	l, err := net.ListenTCP("tcp", a)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -146,7 +147,6 @@ func (s *server) handleConnection(c net.Conn) {
 	clientConnType = observer.ConnHandlerMessages(connType)
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
-
 	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
 		obs := &observer.ConnectionData{
 			Address: c.RemoteAddr().String(),
@@ -195,7 +195,6 @@ func serveFile(c net.Conn) error {
 	defer writer.Flush()
 	_, err = io.Copy(writer, reader)
 
-
 	if err != nil {
 		return fmt.Errorf("Unable to copy file to connection: %v\n", err)
 	}
@@ -218,7 +217,7 @@ func (s *server) addFilesToSubject(dir string, dirEntries []os.DirEntry) {
 	fullPath := make([]string, 0)
 	files := s.FileListener.ReadDirectory(dirEntries)
 	for _, file := range files {
-		fullPath = append(fullPath, dir + "/" + file)
+		fullPath = append(fullPath, dir+"/"+file)
 	}
 	fileInfos := file_listener.BuildFileInfosFromPaths(fullPath)
 	s.FileSubject.SetFiles(append(s.FileSubject.GetFiles(), fileInfos...))
@@ -245,7 +244,6 @@ func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
 			fmt.Printf("cannot get fileInfo for %s\n", event.Name)
 			continue
 		}
-
 
 		// Get timer.
 		mu.Lock()

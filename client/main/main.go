@@ -11,8 +11,8 @@ import (
 	"syscall"
 )
 
-var serverHost = flag.String("server-host", "localhost", "Used to set host of server to connect to.")
-var serverPort = flag.String("server-port", "8000", "Used to set port of server to connect to.")
+var serverHost = flag.String("host", "localhost", "Used to set host of server to connect to.")
+var serverPort = flag.String("port", "8000", "Used to set port of server to connect to.")
 var fileDestination = flag.String("directory", "", "Required. Used to set destination of downloaded file")
 var dbLocation = flag.String("db-location", "./db", "Used to set the location of the database that tracks what files have been downloaded")
 var help = flag.Bool("help", false, "Print this menu.")
@@ -20,7 +20,7 @@ var serverAddress string
 var db string
 var fileDest string
 
-func init()  {
+func init() {
 	flag.Parse()
 	if *help {
 		flag.PrintDefaults()
@@ -34,14 +34,14 @@ func init()  {
 
 	serverHost := strings.TrimSpace(*serverHost)
 	if serverHost == "" {
-		fmt.Fprint(os.Stderr, "server-host is required\n")
+		fmt.Fprint(os.Stderr, "host is required\n")
 		flag.PrintDefaults()
 		os.Exit(99)
 	}
 
 	serverPort := strings.TrimSpace(*serverPort)
 	if serverPort == "" {
-		fmt.Fprint(os.Stderr, "server-port is required\n")
+		fmt.Fprint(os.Stderr, "port is required\n")
 		flag.PrintDefaults()
 		os.Exit(99)
 	}

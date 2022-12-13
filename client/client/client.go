@@ -18,7 +18,7 @@ import (
 type ClientImpl struct {
 	fileManager *file_manager.FileManagerImpl
 	fileChannel chan common.FileInfo
-	directory string
+	directory   string
 }
 
 func NewClientImpl(fileManager *file_manager.FileManagerImpl, directory string) *ClientImpl {
@@ -26,7 +26,7 @@ func NewClientImpl(fileManager *file_manager.FileManagerImpl, directory string) 
 	return &ClientImpl{
 		fileManager: fileManager,
 		fileChannel: fileChannel,
-		directory: directory,
+		directory:   directory,
 	}
 }
 
@@ -105,7 +105,9 @@ func (c *ClientImpl) ListenForFiles(conn *net.TCPConn) {
 }
 
 func (c *ClientImpl) RequestFiles(serverAddress string) {
+	fmt.Println("requesting files")
 	for file := range c.fileChannel {
+		fmt.Printf("requesting file %v\n", file)
 		if c.fileManager.ShouldWriteToDB(file) {
 			go func(info common.FileInfo) {
 				fmt.Printf("got %v\n", info)
@@ -140,7 +142,6 @@ func (c *ClientImpl) RequestFiles(serverAddress string) {
 
 				write, err = fmt.Fprintf(tcp, "%s\n", info.FileName)
 
-
 				if err != nil {
 					fmt.Printf("not able to open file: %v\n", err)
 					return
@@ -151,7 +152,7 @@ func (c *ClientImpl) RequestFiles(serverAddress string) {
 
 				_, err = io.Copy(writer, reader)
 				if err != nil {
-					fmt.Printf("Unable to copy file to connection: %v\n", err)
+					fmt.Printf("Unable to copy file from connection: %v\n", err)
 					return
 				}
 				err = c.fileManager.WriteFileHashToDB(file)

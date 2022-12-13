@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 )
+
 //go:generate mockgen -destination=./mock_dir_entry_test.go --package=file_listener io/fs DirEntry
 
 func (f *FileListener) ListenForFiles(directory string) chan fsnotify.Event {
@@ -41,6 +42,7 @@ func BuildFileInfosFromPaths(filePaths []string) []common.FileInfo {
 }
 
 func BuildFileInfoFromPath(filePath string) (common.FileInfo, error) {
+	fmt.Printf("BuildFileInfoFromPath: %s\n", filePath)
 	f, err := os.Open(filePath)
 	if err != nil {
 		return common.FileInfo{}, fmt.Errorf("error reading file: %v", err)
