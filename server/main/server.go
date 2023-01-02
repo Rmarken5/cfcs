@@ -201,7 +201,10 @@ func serveFile(c net.Conn) error {
 
 func (s *server) listenForFiles(directory string) error {
 
-	fileListener := s.FileListener.ListenForFiles(directory)
+	fileListener, err := s.FileListener.ListenForFiles(directory)
+	if err != nil {
+		return err
+	}
 	fmt.Println("listening for files.")
 
 	s.evaluateEvent(fileListener)

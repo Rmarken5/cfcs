@@ -15,7 +15,7 @@ import (
 //go:generate mockgen -destination=./mock_file_listener.go -package=file_listener . IFileListener
 
 type IFileListener interface {
-	ListenForFiles(directory string) chan fsnotify.Event
+	ListenForFiles(directory string) (chan fsnotify.Event, error)
 	ReadDirectory(dirEntries []os.DirEntry) []string
 }
 
