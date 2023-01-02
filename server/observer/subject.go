@@ -3,11 +3,13 @@ package observer
 import (
 	"fmt"
 	"github.com/rmarken5/cfcs/common"
+	"sync"
 )
 
 type FileBroadcastSubject struct {
 	Files     []common.FileInfo
 	Observers map[string]Observer
+	fileMutex sync.Mutex
 }
 
 func (f *FileBroadcastSubject) AddFile(fileInfo common.FileInfo) {
@@ -63,9 +65,15 @@ func (f *FileBroadcastSubject) NotifyAllWithFile(fileInfo common.FileInfo) {
 }
 
 func (f *FileBroadcastSubject) SetFiles(files []common.FileInfo) {
+	f.fileMutex.Lock()
+	defer f.fileMutex.Unlock()
+
 	f.Files = files
+
 }
 
 func (f *FileBroadcastSubject) GetFiles() []common.FileInfo {
+	f.fileMutex.Lock()
+	defer f.fileMutex.Unlock()
 	return f.Files
 }

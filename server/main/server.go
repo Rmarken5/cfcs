@@ -10,7 +10,6 @@ import (
 	"github.com/rmarken5/cfcs/server/observer"
 	"io"
 	"math"
-	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -18,12 +17,6 @@ import (
 	"sync"
 	"time"
 )
-
-//go:generate mockgen -destination=./mock_net_listener_test.go -package=main net Listener
-//go:generate mockgen -destination=./mock_net_addr_test.go -package=main net Addr
-//go:generate mockgen -destination=./mock_conn_test.go --package=main net Conn
-//go:generate mockgen -destination=./mock_dir_entry_test.go --package=main github.com/Rmarken5/file-broadcaster/file-listener IFileListener
-//go:generate mockgen -destination=./mock_subject_test.go -package=main github.com/Rmarken5/file-broadcaster/observer Subject
 
 type server struct {
 	FileListener file_listener.IFileListener
@@ -58,16 +51,12 @@ func init() {
 }
 
 func main() {
-
+	done := make(chan bool)
 	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		panic(err)
+	}
 
-	if err != nil {
-		panic(err)
-	}
-	dirEntries, err := os.ReadDir(*directory)
-	if err != nil {
-		panic(err)
-	}
 	s := server{
 		FileListener: &file_listener.FileListener{
 			Watcher: watcher,
@@ -77,7 +66,6 @@ func main() {
 			Observers: make(map[string]observer.Observer, 0),
 		},
 	}
-	done := make(chan bool)
 	a, err := net.ResolveTCPAddr("tcp", serverAddress)
 	if err != nil {
 		fmt.Println(err)
@@ -90,9 +78,20 @@ func main() {
 		return
 	}
 	defer l.Close()
-	s.addFilesToSubject(*directory, dirEntries)
+
+	err = s.addFilesToSubject(*directory)
+	if err != nil {
+		fmt.Printf("error adding files to subject %v\n", err)
+		return
+	}
 	go s.acceptClients(l)
-	go s.listenForFiles(*directory)
+	go func() {
+		err := s.listenForFiles(*directory)
+		if err != nil {
+			fmt.Printf("error listening to files %v\n", err)
+			done <- true
+		}
+	}()
 
 	for {
 		select {
@@ -104,7 +103,6 @@ func main() {
 }
 
 func (s *server) acceptClients(listener net.Listener) {
-	rand.Seed(time.Now().Unix())
 
 	for {
 		c, err := listener.Accept()
@@ -206,21 +204,30 @@ func (s *server) listenForFiles(directory string) error {
 	fileListener := s.FileListener.ListenForFiles(directory)
 	fmt.Println("listening for files.")
 
-	done := make(chan bool)
-	go s.evaluateEvent(fileListener)
-
-	<-done
+	s.evaluateEvent(fileListener)
 	return nil
 }
 
-func (s *server) addFilesToSubject(dir string, dirEntries []os.DirEntry) {
-	fullPath := make([]string, 0)
-	files := s.FileListener.ReadDirectory(dirEntries)
-	for _, file := range files {
-		fullPath = append(fullPath, dir+"/"+file)
+func (s *server) addFilesToSubject(dir string) error {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("error reading directory: %w\n", err)
 	}
-	fileInfos := file_listener.BuildFileInfosFromPaths(fullPath)
-	s.FileSubject.SetFiles(append(s.FileSubject.GetFiles(), fileInfos...))
+	allInfos := make([]common.FileInfo, 0)
+	for _, entry := range dirEntries {
+		if entry.IsDir() {
+			continue
+		}
+		filePath := dir + "/" + entry.Name()
+		info, err := file_listener.BuildFileInfoFromPath(filePath)
+		if err != nil {
+			return fmt.Errorf("cannot build fileinfo from path %w\n", err)
+		}
+		allInfos = append(allInfos, info)
+	}
+
+	s.FileSubject.SetFiles(append(s.FileSubject.GetFiles(), allInfos...))
+	return nil
 }
 
 func (s *server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {

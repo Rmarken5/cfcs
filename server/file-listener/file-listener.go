@@ -11,13 +11,14 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -destination=./mock_dir_entry_test.go --package=file_listener io/fs DirEntry
+//go:generate mockgen -destination=./mock_dir_entry.go --package=file_listener io/fs DirEntry
 
 func (f *FileListener) ListenForFiles(directory string) chan fsnotify.Event {
 	f.Watcher.Add(directory)
 	return f.Watcher.Events
 }
 
+// ReadDirectory gets file name from the os.DirEntry - excluding entries that are directories.
 func (f *FileListener) ReadDirectory(dirEntries []os.DirEntry) []string {
 	var files []string
 	for _, entry := range dirEntries {
