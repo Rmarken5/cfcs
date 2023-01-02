@@ -12,10 +12,23 @@ import (
 )
 
 //go:generate mockgen -destination=./mock_dir_entry.go --package=file_listener io/fs DirEntry
+//go:generate mockgen -destination=./mock_file_listener.go -package=file_listener . IFileListener
 
-func (f *FileListener) ListenForFiles(directory string) chan fsnotify.Event {
-	f.Watcher.Add(directory)
-	return f.Watcher.Events
+type IFileListener interface {
+	ListenForFiles(directory string) chan fsnotify.Event
+	ReadDirectory(dirEntries []os.DirEntry) []string
+}
+
+type FileListener struct {
+	Watcher *fsnotify.Watcher
+}
+
+func (f *FileListener) ListenForFiles(directory string) (chan fsnotify.Event, error) {
+	err := f.Watcher.Add(directory)
+	if err != nil {
+		return nil, fmt.Errorf("error getting event channel %w\n", err)
+	}
+	return f.Watcher.Events, nil
 }
 
 // ReadDirectory gets file name from the os.DirEntry - excluding entries that are directories.
@@ -27,19 +40,6 @@ func (f *FileListener) ReadDirectory(dirEntries []os.DirEntry) []string {
 		}
 	}
 	return files
-}
-
-func BuildFileInfosFromPaths(filePaths []string) []common.FileInfo {
-	fileInfos := make([]common.FileInfo, 0)
-	for _, filePath := range filePaths {
-		info, err := BuildFileInfoFromPath(filePath)
-		if err != nil {
-			fmt.Printf("cannot build fileinfo for %s\n", filePath)
-			continue
-		}
-		fileInfos = append(fileInfos, info)
-	}
-	return fileInfos
 }
 
 func BuildFileInfoFromPath(filePath string) (common.FileInfo, error) {
