@@ -146,7 +146,7 @@ func (s *server) handleConnection(c net.Conn) {
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
 	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
-		obs := &observer.ConnectionData{
+		obs := &observer.ConnectionObserver{
 			Address: c.RemoteAddr().String(),
 			Conn:    c,
 		}

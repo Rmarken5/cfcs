@@ -36,11 +36,12 @@ func (m *MockIFileListener) EXPECT() *MockIFileListenerMockRecorder {
 }
 
 // ListenForFiles mocks base method.
-func (m *MockIFileListener) ListenForFiles(arg0 string) chan fsnotify.Event {
+func (m *MockIFileListener) ListenForFiles(arg0 string) (chan fsnotify.Event, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListenForFiles", arg0)
 	ret0, _ := ret[0].(chan fsnotify.Event)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // ListenForFiles indicates an expected call of ListenForFiles.

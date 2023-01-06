@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-//go:generate mockgen -destination=./mock_conn_test.go --package=observer net Conn
+//go:generate mockgen -destination=./mock_conn.go --package=observer net Conn
 
 type ConnHandlerMessages int
 
@@ -18,23 +18,22 @@ const (
 	SERVER_SENDING_FILE_LIST
 )
 
-type ConnectionData struct {
+type ConnectionObserver struct {
 	Address string
 	Conn    net.Conn
 }
 
-func (c *ConnectionData) LoadAllFiles(files []common.FileInfo) error {
+func (c *ConnectionObserver) LoadAllFiles(files []common.FileInfo) error {
 
 	if _, err := c.Conn.Write([]byte(fmt.Sprintf("%d\n", SERVER_SENDING_FILE_LIST))); err != nil {
-		fmt.Printf("Unable to write %s to %s", SERVER_SENDING_FILE_LIST, c.Address)
-		return fmt.Errorf("error %v: ", err)
+		fmt.Printf("Unable to write %s to %s\n", SERVER_SENDING_FILE_LIST, c.Address)
+		return fmt.Errorf("error %v\n: ", err)
 	}
 
 	fmt.Printf("writing files: %+v\n", files)
 	for _, file := range files {
-		fmt.Printf("Writing File: %v\n", file)
-		if err := json.NewEncoder(c.Conn).Encode(file); err != nil {
-			return fmt.Errorf("Unable to write %v to %s: %v\n", files, c.Address, err)
+		if err := c.AddFile(file); err != nil {
+			return err
 		}
 	}
 
@@ -42,8 +41,7 @@ func (c *ConnectionData) LoadAllFiles(files []common.FileInfo) error {
 	return nil
 }
 
-func (c *ConnectionData) AddFile(file common.FileInfo) error {
-
+func (c *ConnectionObserver) AddFile(file common.FileInfo) error {
 	fmt.Printf("writing file: %v\n", file)
 
 	if err := json.NewEncoder(c.Conn).Encode(file); err != nil {
@@ -53,7 +51,7 @@ func (c *ConnectionData) AddFile(file common.FileInfo) error {
 	return nil
 }
 
-func (c *ConnectionData) GetIdentifier() string {
+func (c *ConnectionObserver) GetIdentifier() string {
 	return c.Address
 }
 
