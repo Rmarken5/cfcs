@@ -68,7 +68,7 @@ func generateHash(srcFile *os.File) (string, error) {
 	hash := md5.New()
 	//Copy the file in the hash interface and check for any error
 	if _, err := io.Copy(hash, srcFile); err != nil {
-		fmt.Printf("errpr in copy: %v\n", err)
+		fmt.Printf("error in copy: %v\n", err)
 		return returnMD5String, err
 	}
 	//Get the 16 bytes hash

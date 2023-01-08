@@ -114,15 +114,25 @@ func TestFileListener_BuildFileInfoFromPath(t *testing.T) {
 			wantFile:  "tmp.txt",
 			wantDir:   testDir,
 		},
+		"should handle error opening file" :{
+			wantError: true,
+			wantFile: "tmp.txt",
+			wantDir: "should/not/work",
+		},
+
 	}
 
 	for name, tt := range testCases {
 		name := name
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			err2 := os.WriteFile(tt.wantDir+"/"+tt.wantFile, []byte(""), 0666)
-			assert.NoError(t, err2)
-			info, err := BuildFileInfoFromPath(testDir + "/" + tt.wantFile)
+			err := os.WriteFile(testDir+"/"+tt.wantFile, []byte(""), 0666)
+			assert.NoError(t, err)
+			defer func () {
+				err := os.Remove(testDir + "/" + tt.wantFile)
+				assert.NoError(t, err)
+			}()
+			info, err := BuildFileInfoFromPath(tt.wantDir + "/" + tt.wantFile)
 			if tt.wantError {
 				assert.Error(t, err)
 			} else {

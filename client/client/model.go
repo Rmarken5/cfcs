@@ -4,9 +4,9 @@ import (
 	"net"
 )
 
-//go:generate mockgen -destination mock_client_test.go -package client_test net Conn
+//go:generate mockgen -destination mock_client.go -package client . Client
 
-//go:generate mockgen -destination mock_client_test.go -package client_test github.com/Rmarken5/file-client/file-manager FileManager
+//go:generate mockgen -destination mock_net_conn.go -package client net Conn
 
 type Client interface {
 	ConnectToServer(address string) (*net.TCPConn, error)
