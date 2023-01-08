@@ -10,18 +10,44 @@ import (
 )
 
 func TestFileListener_ListenForFiles(t *testing.T) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		assert.NoError(t, err)
-	}
-	defer watcher.Close()
-	fileListener := FileListener{
-		watcher,
+	t.Parallel()
+	testCases := map[string]struct {
+		wantDirectory string
+		wantErr       bool
+	}{
+		"successfully returns event channel": {
+			wantDirectory: "",
+			wantErr:       false,
+		},
+		"Should throw error for directory": {
+			wantDirectory: "/this/should/not/work",
+			wantErr:       true,
+		},
 	}
 
-	event, err := fileListener.ListenForFiles("")
-	assert.NoError(t, err)
-	assert.NotNil(t, event)
+	for name, tc := range testCases {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			watcher, err := fsnotify.NewWatcher()
+			assert.NoError(t, err)
+			defer func() {
+				err2 := watcher.Close()
+				assert.NoError(t, err2)
+			}()
+			fileListener := FileListener{
+				watcher,
+			}
+
+			event, err := fileListener.ListenForFiles(tc.wantDirectory)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NotNil(t, event)
+			}
+		})
+	}
 }
 
 func TestFileListener_ReadDirectory(t *testing.T) {
@@ -69,19 +95,24 @@ func TestFileListener_ReadDirectoryIsDir(t *testing.T) {
 }
 
 func TestFileListener_BuildFileInfoFromPath(t *testing.T) {
-	wantDir := "temp-test"
-	err := os.Mkdir(wantDir, 0777)
+	testDir := "temp-test"
+	err := os.Mkdir(testDir, 0777)
 	if err != nil {
 		assert.NoError(t, err, "should not get error creating dir")
 	}
-	defer os.RemoveAll(wantDir)
+	defer func() {
+		err2 := os.RemoveAll(testDir)
+		assert.NoError(t, err2)
+	}()
 	testCases := map[string]struct {
-		wantError    bool
-		wantFileName string
+		wantError bool
+		wantFile  string
+		wantDir   string
 	}{
 		"should get successful file info from file path": {
-			wantError:    false,
-			wantFileName: "tmp.txt",
+			wantError: false,
+			wantFile:  "tmp.txt",
+			wantDir:   testDir,
 		},
 	}
 
@@ -89,14 +120,14 @@ func TestFileListener_BuildFileInfoFromPath(t *testing.T) {
 		name := name
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			err2 := os.WriteFile(wantDir+"/"+tt.wantFileName, []byte(""), 0666)
+			err2 := os.WriteFile(tt.wantDir+"/"+tt.wantFile, []byte(""), 0666)
 			assert.NoError(t, err2)
-			info, err := BuildFileInfoFromPath(wantDir + "/" + tt.wantFileName)
+			info, err := BuildFileInfoFromPath(testDir + "/" + tt.wantFile)
 			if tt.wantError {
 				assert.Error(t, err)
 			} else {
 				assert.NotNil(t, info)
-				assert.Equal(t, tt.wantFileName, info.FileName)
+				assert.Equal(t, tt.wantFile, info.FileName)
 			}
 		})
 	}
