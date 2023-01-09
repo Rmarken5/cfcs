@@ -179,3 +179,39 @@ func TestConnectionData_GetIdentifier(t *testing.T) {
 	addr := connData.GetIdentifier()
 	assert.EqualValues(t, "hello", addr)
 }
+
+
+func TestIsCHM(t *testing.T) {
+	t.Parallel()
+	testCases := map[string]struct{
+		isCHM bool
+		chm   int
+	}{
+		"FILE_LISTENER_CONN_TYPE": {
+			isCHM: true,
+			chm: 0,
+		},
+		"FILE_REQUEST_CONNECTION": {
+			isCHM: true,
+			chm: 1,
+		},
+		"SERVER_READY_TO_RECEIVE_FILE_REQUEST": {
+			isCHM: true,
+			chm: 2,
+		},
+		"BOGUS is not CHM": {
+			isCHM: false,
+			chm: 100,
+		},
+	}
+
+	for name, tc := range testCases {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, tc.isCHM == IsCHM(tc.chm))
+		})
+	}
+
+}
