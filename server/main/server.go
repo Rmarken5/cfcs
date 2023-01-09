@@ -19,7 +19,7 @@ import (
 )
 
 type server struct {
-	FileListener file_listener.IFileListener
+	FileListener file_listener.FileListener
 	FileSubject  observer.Subject
 }
 
@@ -58,7 +58,7 @@ func main() {
 	}
 
 	s := server{
-		FileListener: &file_listener.FileListener{
+		FileListener: &file_listener.FileListenerImpl{
 			Watcher: watcher,
 		},
 		FileSubject: &observer.FileBroadcastSubject{
@@ -72,12 +72,18 @@ func main() {
 		return
 	}
 
+
 	l, err := net.ListenTCP("tcp", a)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	defer l.Close()
+	defer func(l *net.TCPListener) {
+		err := l.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(l)
 
 	err = s.addFilesToSubject(*directory)
 	if err != nil {

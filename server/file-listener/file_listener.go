@@ -12,18 +12,18 @@ import (
 )
 
 //go:generate mockgen -destination=./mock_dir_entry.go --package=file_listener io/fs DirEntry
-//go:generate mockgen -destination=./mock_file_listener.go -package=file_listener . IFileListener
+//go:generate mockgen -destination=./mock_file_listener.go -package=file_listener . FileListener
 
-type IFileListener interface {
+type FileListener interface {
 	ListenForFiles(directory string) (chan fsnotify.Event, error)
 	ReadDirectory(dirEntries []os.DirEntry) []string
 }
 
-type FileListener struct {
+type FileListenerImpl struct {
 	Watcher *fsnotify.Watcher
 }
 
-func (f *FileListener) ListenForFiles(directory string) (chan fsnotify.Event, error) {
+func (f *FileListenerImpl) ListenForFiles(directory string) (chan fsnotify.Event, error) {
 	err := f.Watcher.Add(directory)
 	if err != nil {
 		return nil, fmt.Errorf("error getting event channel %w\n", err)
@@ -32,7 +32,7 @@ func (f *FileListener) ListenForFiles(directory string) (chan fsnotify.Event, er
 }
 
 // ReadDirectory gets file name from the os.DirEntry - excluding entries that are directories.
-func (f *FileListener) ReadDirectory(dirEntries []os.DirEntry) []string {
+func (f *FileListenerImpl) ReadDirectory(dirEntries []os.DirEntry) []string {
 	var files []string
 	for _, entry := range dirEntries {
 		if !entry.IsDir() {

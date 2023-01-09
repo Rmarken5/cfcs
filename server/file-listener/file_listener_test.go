@@ -36,7 +36,7 @@ func TestFileListener_ListenForFiles(t *testing.T) {
 				err2 := watcher.Close()
 				assert.NoError(t, err2)
 			}()
-			fileListener := FileListener{
+			fileListener := FileListenerImpl{
 				watcher,
 			}
 
@@ -61,7 +61,7 @@ func TestFileListener_ReadDirectory(t *testing.T) {
 	entry.EXPECT().IsDir().AnyTimes().Return(false)
 	entry.EXPECT().Name().AnyTimes().Return("Derp")
 
-	fileListener := FileListener{
+	fileListener := FileListenerImpl{
 		watcher,
 	}
 	dirEntries := []fs.DirEntry{
@@ -83,7 +83,7 @@ func TestFileListener_ReadDirectoryIsDir(t *testing.T) {
 	entry.EXPECT().IsDir().AnyTimes().Return(true)
 	entry.EXPECT().Name().AnyTimes().Return("Derp")
 
-	fileListener := FileListener{
+	fileListener := FileListenerImpl{
 		watcher,
 	}
 	dirEntries := []fs.DirEntry{
