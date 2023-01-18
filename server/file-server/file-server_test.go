@@ -1,4 +1,4 @@
-package main
+package file_server
 
 import (
 	"fmt"
@@ -47,11 +47,15 @@ func TestServer_AcceptClients(t *testing.T) {
 				return
 			}
 
-			server := server{
+			server := Server{
 				FileListener: mockListener,
 				FileSubject:  mockSubject,
 			}
-			server.acceptClients(l)
+			go server.AcceptClients(l)
+			defer func(listener net.Listener) {
+				err := l.Close()
+				assert.NoError(t, err, "error closing connection")
+			}(l)
 
 			conn, err := net.Dial("tcp", a.String())
 			assert.NoError(t, err, "error getting connection")

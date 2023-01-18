@@ -180,28 +180,27 @@ func TestConnectionData_GetIdentifier(t *testing.T) {
 	assert.EqualValues(t, "hello", addr)
 }
 
+func TestConnHandlerMessages_String(t *testing.T) {
 
-func TestIsCHM(t *testing.T) {
-	t.Parallel()
-	testCases := map[string]struct{
-		isCHM bool
-		chm   int
+	testCases := map[string]struct {
+		wantString         string
+		testHandlerMessage ConnHandlerMessage
 	}{
 		"FILE_LISTENER_CONN_TYPE": {
-			isCHM: true,
-			chm: 0,
+			wantString:         "FILE_LISTENER_CONNECTION",
+			testHandlerMessage: FILE_LISTENER_CONN_TYPE,
 		},
-		"FILE_REQUEST_CONNECTION": {
-			isCHM: true,
-			chm: 1,
+		"FILE_REQUEST_CONN_TYPE": {
+			wantString:         "FILE_REQUEST_CONNECTION",
+			testHandlerMessage: FILE_REQUEST_CONN_TYPE,
 		},
 		"SERVER_READY_TO_RECEIVE_FILE_REQUEST": {
-			isCHM: true,
-			chm: 2,
+			wantString:         "SERVER_READY_TO_RECEIVE_FILE_REQUEST",
+			testHandlerMessage: SERVER_READY_TO_RECEIVE_FILE_REQUEST,
 		},
-		"BOGUS is not CHM": {
-			isCHM: false,
-			chm: 100,
+		"Not a message": {
+			wantString:         "",
+			testHandlerMessage: 99,
 		},
 	}
 
@@ -209,9 +208,39 @@ func TestIsCHM(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			assert.True(t, tc.isCHM == IsCHM(tc.chm))
+			assert.Equal(t, tc.wantString, tc.testHandlerMessage.String())
 		})
 	}
+}
 
+func TestIsCHM(t *testing.T) {
+	testCases := map[string]struct {
+		isMessage          bool
+		testHandlerMessage int
+	}{
+		"FILE_LISTENER_CONN_TYPE": {
+			isMessage:          true,
+			testHandlerMessage: 0,
+		},
+		"FILE_REQUEST_CONN_TYPE": {
+			isMessage:          true,
+			testHandlerMessage: 1,
+		},
+		"SERVER_READY_TO_RECEIVE_FILE_REQUEST": {
+			isMessage:          true,
+			testHandlerMessage: 2,
+		},
+		"Not a message": {
+			isMessage:          false,
+			testHandlerMessage: 3,
+		},
+	}
+
+	for name, tc := range testCases {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, IsCHM(tc.testHandlerMessage), tc.isMessage)
+		})
+	}
 }
