@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 )
+//go:generate mockgen -destination mock_conn.go -package file_server net Conn
 
 type Server struct {
 	FileListener file_listener.FileListener
@@ -29,7 +30,7 @@ func (s *Server) AcceptClients(listener net.Listener) {
 		c, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err)
-			return
+			continue
 		}
 		if c != nil {
 			go s.handleConnection(c)
@@ -43,15 +44,16 @@ func (s *Server) handleConnection(c net.Conn) {
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
 
 	r, err := c.Read(buffer)
+	if r <= 0 {
+		fmt.Println("No bytes read from client on handshake")
+	}
+
 	fmt.Printf("Read length: %d\n", r)
 	if err != nil {
 		fmt.Printf("error reading incoming connection for type: %v\n", err)
 		return
 	}
 
-	if r <= 0 {
-		fmt.Println("No bytes read from client on handshake")
-	}
 	str := strings.TrimSpace(string(buffer[0:r]))
 	connType, err := strconv.Atoi(str)
 	if err != nil {
