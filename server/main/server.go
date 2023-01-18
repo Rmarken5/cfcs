@@ -118,7 +118,7 @@ func (s *server) acceptClients(listener net.Listener) {
 
 func (s *server) handleConnection(c net.Conn) {
 	buffer := make([]byte, 1024)
-	var clientConnType observer.ConnHandlerMessages
+	var clientConnType observer.ConnHandlerMessage
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
 
 	r, err := c.Read(buffer)
@@ -142,7 +142,7 @@ func (s *server) handleConnection(c net.Conn) {
 		fmt.Printf("Not a request that can be fulfilled: %d\n", connType)
 		return
 	}
-	clientConnType = observer.ConnHandlerMessages(connType)
+	clientConnType = observer.ConnHandlerMessage(connType)
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
 	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
