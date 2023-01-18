@@ -9,7 +9,7 @@ import (
 type FileBroadcastSubject struct {
 	Files     []common.FileInfo
 	Observers map[string]Observer
-	fileMutex sync.Mutex
+	fileMutex sync.RWMutex
 }
 
 func (f *FileBroadcastSubject) AddFile(fileInfo common.FileInfo) {
@@ -32,7 +32,6 @@ func (f *FileBroadcastSubject) RemoveFile(fileInfo common.FileInfo) {
 		}
 	}
 	f.Files = newFileArr
-	//f.NotifyAll()
 }
 
 func (f *FileBroadcastSubject) Subscribe(observer Observer) {
@@ -67,9 +66,7 @@ func (f *FileBroadcastSubject) NotifyAllWithFile(fileInfo common.FileInfo) {
 func (f *FileBroadcastSubject) SetFiles(files []common.FileInfo) {
 	f.fileMutex.Lock()
 	defer f.fileMutex.Unlock()
-
 	f.Files = files
-
 }
 
 func (f *FileBroadcastSubject) GetFiles() []common.FileInfo {
