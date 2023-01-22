@@ -37,7 +37,9 @@ func (f *FileBroadcastSubject) RemoveFile(fileInfo common.FileInfo) {
 func (f *FileBroadcastSubject) Subscribe(observer Observer) {
 	fmt.Println("Adding new observer to subject: ", observer.GetIdentifier())
 	f.Observers[observer.GetIdentifier()] = observer
-	observer.LoadAllFiles(f.Files)
+	if err := observer.LoadAllFiles(f.Files); err != nil {
+		fmt.Printf("error in subscibing observer to files: %v/n", err)
+	}
 }
 
 func (f *FileBroadcastSubject) Unsubscribe(key string) {
