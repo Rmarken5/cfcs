@@ -57,6 +57,9 @@ func main() {
 		},
 		FileDirectory: *directory,
 	}
+
+	s.FileListener.CreateDirectory(*directory)
+
 	a, err := net.ResolveTCPAddr("tcp", serverAddress)
 	if err != nil {
 		fmt.Println(err)
