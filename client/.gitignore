@@ -8,4 +8,4 @@
 /httpRequests/
 /.idea/
 /file-manager/file_manager_test/test-db/
-/tmp/
+client/tmp/**

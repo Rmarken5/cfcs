@@ -16,7 +16,7 @@ build-client:
 
 .PHONY: run-client
 run-client:
-	go run ./client/main/main.go --directory ./client/client/tmp --port 8999
+	go run ./client/main/main.go --directory ./client/tmp --port 8999
 
 .PHONY: gen
 gen:
