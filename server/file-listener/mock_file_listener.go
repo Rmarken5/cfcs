@@ -35,6 +35,20 @@ func (m *MockFileListener) EXPECT() *MockFileListenerMockRecorder {
 	return m.recorder
 }
 
+// CreateDirectory mocks base method.
+func (m *MockFileListener) CreateDirectory(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDirectory", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateDirectory indicates an expected call of CreateDirectory.
+func (mr *MockFileListenerMockRecorder) CreateDirectory(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDirectory", reflect.TypeOf((*MockFileListener)(nil).CreateDirectory), arg0)
+}
+
 // ListenForFiles mocks base method.
 func (m *MockFileListener) ListenForFiles(arg0 string) (chan fsnotify.Event, error) {
 	m.ctrl.T.Helper()

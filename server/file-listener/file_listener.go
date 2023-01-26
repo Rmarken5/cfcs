@@ -17,6 +17,7 @@ import (
 type FileListener interface {
 	ListenForFiles(directory string) (chan fsnotify.Event, error)
 	ReadDirectory(dirEntries []os.DirEntry) []string
+	CreateDirectory(directory string) error
 }
 
 type FileListenerImpl struct {
@@ -58,6 +59,15 @@ func BuildFileInfoFromPath(filePath string) (common.FileInfo, error) {
 		FileName: GetFileNameFromPath(f.Name()),
 	}, nil
 
+}
+
+func (f *FileListenerImpl) CreateDirectory(directory string) error  {
+
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		err := os.MkdirAll(directory, 0766)
+		return err
+	}
+	return nil
 }
 
 func generateHash(srcFile *os.File) (string, error) {

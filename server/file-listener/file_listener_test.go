@@ -142,3 +142,44 @@ func TestFileListener_BuildFileInfoFromPath(t *testing.T) {
 		})
 	}
 }
+
+func TestFileListenerImpl_CreateDirectory(t *testing.T) {
+	testDir := "/tmp/cfcs/test"
+	testCases := map[string]struct {
+		directory string
+		wantErr bool
+		tempDirectory func(dir string)
+	}{
+		"creates new dir": {
+			directory: testDir,
+			wantErr: false,
+			tempDirectory: func(dir string) {
+
+			},
+		},
+		"directory already exists": {
+			directory: testDir+"/hello",
+			wantErr: false,
+			tempDirectory: func(dir string) {
+				os.MkdirAll(dir, 0766)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		name := name
+		tc := tc
+
+		t.Run(name, func(t *testing.T) {
+			tc.tempDirectory(tc.directory)
+			f := &FileListenerImpl{}
+			err := f.CreateDirectory(tc.directory)
+			defer os.RemoveAll(tc.directory)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

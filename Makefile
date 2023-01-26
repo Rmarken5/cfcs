@@ -21,3 +21,11 @@ run-client:
 .PHONY: gen
 gen:
 	go generate -v -x ./...
+
+.PHONY: test-coverage
+test-coverage:
+	 go test ./... -coverprofile cp.out
+
+.PHONY:
+print-coverage: test-coverage
+	go tool cover -html=cp.out
