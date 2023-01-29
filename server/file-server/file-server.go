@@ -40,7 +40,7 @@ func (s *Server) AcceptClients(listener net.Listener) {
 
 func (s *Server) handleConnection(c net.Conn) {
 	buffer := make([]byte, 1024)
-	var clientConnType observer.ConnHandlerMessage
+	var clientConnType common.ConnHandlerMessage
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
 
 	r, err := c.Read(buffer)
@@ -61,14 +61,14 @@ func (s *Server) handleConnection(c net.Conn) {
 		return
 	}
 
-	if !observer.IsCHM(connType) {
+	if !common.IsCHM(connType) {
 		fmt.Printf("Not a request that can be fulfilled: %d\n", connType)
 		return
 	}
-	clientConnType = observer.ConnHandlerMessage(connType)
+	clientConnType = common.ConnHandlerMessage(connType)
 	fmt.Println("Conn handler message: " + clientConnType.String())
 
-	if clientConnType == observer.FILE_LISTENER_CONN_TYPE {
+	if clientConnType == common.FILE_LISTENER_CONN_TYPE {
 		obs := &observer.ConnectionObserver{
 			Address: c.RemoteAddr().String(),
 			Conn:    c,
@@ -78,7 +78,7 @@ func (s *Server) handleConnection(c net.Conn) {
 		s.FileSubject.Subscribe(obs)
 	}
 
-	if clientConnType == observer.FILE_REQUEST_CONN_TYPE {
+	if clientConnType == common.FILE_REQUEST_CONN_TYPE {
 		if err := serveFile(c, s.FileDirectory); err != nil {
 			fmt.Printf("error serving file: %v", err)
 		}
@@ -165,7 +165,7 @@ func (s *Server) evaluateEvent(listenerChannel <-chan fsnotify.Event) {
 
 func serveFile(c net.Conn, directory string) error {
 	buffer := make([]byte, 1024)
-	_, err := fmt.Fprintln(c, observer.SERVER_READY_TO_RECEIVE_FILE_REQUEST)
+	_, err := fmt.Fprintln(c, common.SERVER_READY_TO_RECEIVE_FILE_REQUEST)
 	if err != nil {
 		return fmt.Errorf("not able to communicate with client: %v\n", err)
 	}

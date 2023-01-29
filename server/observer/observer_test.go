@@ -19,7 +19,7 @@ func TestConnectionObserver_LoadAllFiles(t *testing.T) {
 			wantError: false,
 			mockDependencies: func(controller *gomock.Controller, files []common.FileInfo) *ConnectionObserver {
 				c := NewMockConn(controller)
-				c.EXPECT().Write(gomock.Any()).Return(len(SERVER_SENDING_FILE_LIST.String())+1, nil)
+				c.EXPECT().Write(gomock.Any()).Return(len(common.SERVER_SENDING_FILE_LIST.String())+1, nil)
 				c.EXPECT().Write(gomock.Any()).Times(len(files)).Return(1, nil)
 
 				return &ConnectionObserver{
@@ -49,7 +49,7 @@ func TestConnectionObserver_LoadAllFiles(t *testing.T) {
 			wantError: true,
 			mockDependencies: func(controller *gomock.Controller, files []common.FileInfo) *ConnectionObserver {
 				c := NewMockConn(controller)
-				c.EXPECT().Write(gomock.Any()).Return(len(SERVER_SENDING_FILE_LIST.String())+1, nil)
+				c.EXPECT().Write(gomock.Any()).Return(len(common.SERVER_SENDING_FILE_LIST.String())+1, nil)
 				c.EXPECT().Write(gomock.Any()).Return(0, net.ErrWriteToConnected)
 
 				return &ConnectionObserver{
@@ -66,7 +66,7 @@ func TestConnectionObserver_LoadAllFiles(t *testing.T) {
 			wantError: true,
 			mockDependencies: func(controller *gomock.Controller, files []common.FileInfo) *ConnectionObserver {
 				c := NewMockConn(controller)
-				c.EXPECT().Write(gomock.Any()).Return(len(SERVER_SENDING_FILE_LIST.String())+1, nil)
+				c.EXPECT().Write(gomock.Any()).Return(len(common.SERVER_SENDING_FILE_LIST.String())+1, nil)
 				c.EXPECT().Write(gomock.Any()).Return(1, nil)
 				c.EXPECT().Write(gomock.Any()).Return(0, net.ErrWriteToConnected)
 
@@ -184,19 +184,19 @@ func TestConnHandlerMessages_String(t *testing.T) {
 
 	testCases := map[string]struct {
 		wantString         string
-		testHandlerMessage ConnHandlerMessage
+		testHandlerMessage common.ConnHandlerMessage
 	}{
 		"FILE_LISTENER_CONN_TYPE": {
 			wantString:         "FILE_LISTENER_CONNECTION",
-			testHandlerMessage: FILE_LISTENER_CONN_TYPE,
+			testHandlerMessage: common.FILE_LISTENER_CONN_TYPE,
 		},
 		"FILE_REQUEST_CONN_TYPE": {
 			wantString:         "FILE_REQUEST_CONNECTION",
-			testHandlerMessage: FILE_REQUEST_CONN_TYPE,
+			testHandlerMessage: common.FILE_REQUEST_CONN_TYPE,
 		},
 		"SERVER_READY_TO_RECEIVE_FILE_REQUEST": {
 			wantString:         "SERVER_READY_TO_RECEIVE_FILE_REQUEST",
-			testHandlerMessage: SERVER_READY_TO_RECEIVE_FILE_REQUEST,
+			testHandlerMessage: common.SERVER_READY_TO_RECEIVE_FILE_REQUEST,
 		},
 		"Not a message": {
 			wantString:         "",
@@ -240,7 +240,7 @@ func TestIsCHM(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, IsCHM(tc.testHandlerMessage), tc.isMessage)
+			assert.Equal(t, common.IsCHM(tc.testHandlerMessage), tc.isMessage)
 		})
 	}
 }

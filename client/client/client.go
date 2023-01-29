@@ -6,7 +6,6 @@ import (
 	"fmt"
 	file_manager "github.com/rmarken5/cfcs/client/file-manager"
 	"github.com/rmarken5/cfcs/common"
-	"github.com/rmarken5/cfcs/server/observer"
 	"io"
 	"log"
 	"net"
@@ -47,7 +46,7 @@ func (c *ClientImpl) ConnectToServer(address string) (*net.TCPConn, error) {
 }
 
 func (c *ClientImpl) RequestAllFileNames(conn *net.TCPConn) error {
-	w, err := fmt.Fprintf(conn, "%d\n", observer.FILE_LISTENER_CONN_TYPE)
+	w, err := fmt.Fprintf(conn, "%d\n", common.FILE_LISTENER_CONN_TYPE)
 	if err != nil {
 		return fmt.Errorf("error requesting all files: %v", err)
 	}
@@ -77,7 +76,7 @@ func (c *ClientImpl) ManageServerResponses(conn *net.TCPConn) {
 		fmt.Println("String from server: " + str)
 		time.Sleep(time.Second)
 		switch str {
-		case fmt.Sprintf("%d", observer.SERVER_SENDING_FILE_LIST):
+		case fmt.Sprintf("%d", common.SERVER_SENDING_FILE_LIST):
 			c.ListenForFiles(conn)
 		}
 	}
@@ -126,7 +125,7 @@ func (c *ClientImpl) RequestFiles(serverAddress string) {
 					fmt.Printf("Cannot conenct to server: %v\n", err)
 					return
 				}
-				write, err := fmt.Fprintf(tcp, "%d\n", observer.FILE_REQUEST_CONN_TYPE)
+				write, err := fmt.Fprintf(tcp, "%d\n", common.FILE_REQUEST_CONN_TYPE)
 
 				if err != nil {
 					fmt.Printf("error writing to tcp: %v\n", err)

@@ -3,6 +3,7 @@ package file_server
 import (
 	"fmt"
 	"github.com/golang/mock/gomock"
+	"github.com/rmarken5/cfcs/common"
 	file_listener "github.com/rmarken5/cfcs/server/file-listener"
 	"github.com/rmarken5/cfcs/server/observer"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,7 @@ func TestServer_AcceptClients(t *testing.T) {
 		mockServer               func(ctrl *gomock.Controller) *Server
 	}{
 		"should subscribe connection": {
-			clientConnectionCommands: []string{fmt.Sprintf("%d\n", observer.FILE_LISTENER_CONN_TYPE)},
+			clientConnectionCommands: []string{fmt.Sprintf("%d\n", common.FILE_LISTENER_CONN_TYPE)},
 			mockConn: func(ctrl *gomock.Controller, address string) net.Conn {
 				conn, err := net.Dial("tcp", address)
 				assert.NoError(t, err, "error getting connection")
@@ -56,7 +57,7 @@ func TestServer_AcceptClients(t *testing.T) {
 			wantSubscriber: true,
 		},
 		"should serve file": {
-			clientConnectionCommands: []string{fmt.Sprintf("%d\n", observer.FILE_REQUEST_CONN_TYPE), strings.Split(f.Name(), "/")[2]+"\n"},
+			clientConnectionCommands: []string{fmt.Sprintf("%d\n", common.FILE_REQUEST_CONN_TYPE), strings.Split(f.Name(), "/")[2]+"\n"},
 			mockConn: func(ctrl *gomock.Controller, address string) net.Conn {
 				conn, err := net.Dial("tcp", address)
 				assert.NoError(t, err, "error getting connection")
