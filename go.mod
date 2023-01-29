@@ -9,6 +9,10 @@ require (
 	github.com/stretchr/testify v1.8.1
 )
 
+retract (
+
+)
+
 require (
 	github.com/abcum/lcp v0.0.0-20201209214815-7a3f3840be81 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

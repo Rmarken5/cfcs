@@ -29,3 +29,11 @@ test-coverage:
 .PHONY:
 print-coverage: test-coverage
 	go tool cover -html=cp.out
+
+.PHONY:
+docker-build-client:
+	docker build . -f ./dockerfiles/client.dockerfile -t rmarken5/test-cfc
+
+.PHONY:
+docker-build-server:
+	docker build . -f ./dockerfiles/server.dockerfile -t rmarken5/test-cfs
